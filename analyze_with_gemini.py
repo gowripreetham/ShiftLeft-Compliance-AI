@@ -93,6 +93,20 @@ def analyze_capture(capture_path):
 
     print(f"✅ Analysis complete: {out_path}")
     print(f"🔍 Risk level: {risk_level} | {len(all_findings)} finding(s)")
+
+    # -----------------------------
+    # Print Commit Summary
+    # -----------------------------
+    summary = (
+        "\n🧾 COMMIT SUMMARY\n"
+        f"Branch: {data.get('branch', 'unknown')}\n"
+        f"Commit: {data.get('commit_message', 'N/A')}\n"
+        f"Risk Level: {risk_level}\n"
+        f"Findings: {len(all_findings)} ({', '.join(set(f['type'] for f in all_findings)) if all_findings else 'None'})\n"
+    )
+    print(summary)
+
+    
     return analysis
 
 
