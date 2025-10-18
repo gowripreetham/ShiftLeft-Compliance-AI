@@ -3,6 +3,8 @@ import os
 import json
 import subprocess
 from datetime import datetime
+from re import sub
+
 
 def get_git_info():
     """Collects metadata from the local repo."""
@@ -52,11 +54,20 @@ def build_commit_payload(diff_path="/tmp/staged.diff"):
         "diff_content": diff_content,
     }
 
-    # Save payload for later analysis
-    out_dir = "./captures/commits"
-    os.makedirs(out_dir, exist_ok=True)
-    out_path = os.path.join(out_dir, f"{datetime.utcnow().timestamp()}.json")
+    # ---------------------------------------------------------------------
+    # Build clean folder + filename
+    # ---------------------------------------------------------------------
+    safe_branch = sub(r"[^a-zA-Z0-9_-]", "_", branch)
+    safe_msg = sub(r"[^a-zA-Z0-9_-]", "_", commit_msg[:30])
+    timestamp = datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S")
 
+    out_dir = os.path.join("captures", "commits", safe_branch)
+    os.makedirs(out_dir, exist_ok=True)
+
+    filename = f"{timestamp}_{safe_msg}.json"
+    out_path = os.path.join(out_dir, filename)
+
+    # Save the payload
     with open(out_path, "w") as f:
         json.dump(payload, f, indent=4)
 
