@@ -4,6 +4,8 @@ import json
 import subprocess
 from datetime import datetime
 from re import sub
+import hashlib
+import glob
 
 
 # ---------------------------------------------------------------------
@@ -76,6 +78,51 @@ def get_new_history_lines(history_path="~/.zsh_history",
 
 
 # ---------------------------------------------------------------------
+# New Additions: Configs + Logs + Screenshots
+# ---------------------------------------------------------------------
+def hash_file(path):
+    """Return SHA256 hash of a file."""
+    try:
+        with open(path, "rb") as f:
+            return hashlib.sha256(f.read()).hexdigest()
+    except Exception:
+        return None
+
+
+def capture_config_files(base_dirs=("infra", "config"), patterns=("*.yaml", "*.yml", "*.json", "*.tf", "*.toml")):
+    """
+    Find and hash config/infrastructure files for compliance tracking.
+    Returns a dict of {filename: sha256}.
+    """
+    configs = {}
+    for base in base_dirs:
+        if not os.path.exists(base):
+            continue
+        for pattern in patterns:
+            for path in glob.glob(os.path.join(base, "**", pattern), recursive=True):
+                h = hash_file(path)
+                if h:
+                    configs[path] = h
+    return configs or {"info": "No config files found"}
+
+
+def capture_logs(log_files=("app.log", "terraform.log", "deployment.log"), lines=20):
+    """
+    Reads the last N lines of known log files if they exist.
+    """
+    snippets = {}
+    for lf in log_files:
+        if os.path.exists(lf):
+            try:
+                with open(lf, "r", errors="ignore") as f:
+                    content = f.readlines()[-lines:]
+                    snippets[lf] = "".join(content)
+            except Exception as e:
+                snippets[lf] = f"Error reading log: {e}"
+    return snippets or {"info": "No logs found"}
+
+
+# ---------------------------------------------------------------------
 # Core logic
 # ---------------------------------------------------------------------
 def build_commit_payload(diff_path="/tmp/staged.diff"):
@@ -92,6 +139,11 @@ def build_commit_payload(diff_path="/tmp/staged.diff"):
     # Collect recent terminal commands
     recent_history = get_new_history_lines()
 
+    # Capture configs and logs
+    config_snapshots = capture_config_files()
+    log_snippets = capture_logs()
+    screenshots = []  # Placeholder for future extension capture
+
     payload = {
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "branch": branch,
@@ -100,7 +152,10 @@ def build_commit_payload(diff_path="/tmp/staged.diff"):
         "commit_message": commit_msg,
         "diff_file": diff_path,
         "diff_content": diff_content,
-        "recent_terminal_history": recent_history
+        "recent_terminal_history": recent_history,
+        "config_snapshots": config_snapshots,
+        "log_snippets": log_snippets,
+        "screenshots": screenshots
     }
 
     # -----------------------------------------------------------------
@@ -121,6 +176,7 @@ def build_commit_payload(diff_path="/tmp/staged.diff"):
 
     print(f"✅ Commit payload saved at {out_path}")
     print(f"🧩 Captured {len(recent_history)} new terminal command(s).")
+    print(f"⚙️  Captured {len(config_snapshots)} config files and {len(log_snippets)} logs.")
     return payload
 
 
