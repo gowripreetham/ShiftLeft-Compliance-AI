@@ -71,9 +71,7 @@ def get_new_history_lines(history_path="~/.zsh_history",
         line = l.strip()
         if not line:
             continue
-        # Optional filter: only keep relevant commands
-        if any(k in line for k in ["aws", "kubectl", "terraform", "gcloud", "docker"]):
-            clean.append(line)
+        clean.append(line)
     return clean or ["No relevant new commands."]
 
 
