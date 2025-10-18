@@ -1,112 +1,96 @@
 #!/usr/bin/env python3
 import os
-import re
 import json
 from datetime import datetime
+import google.generativeai as genai
+from dotenv import load_dotenv
 
 # ---------------------------------------------------------------------
-# Helper: Regex-based detection rules
+# Setup Gemini API
 # ---------------------------------------------------------------------
-PATTERNS = {
-    "aws_access_key": r"AKIA[0-9A-Z]{16}",
-    "aws_secret_key": r"(?i)aws(.{0,20})?(secret|key)['\"]?\s*[:=]\s*['\"][A-Za-z0-9/+=]{40}['\"]",
-    "email": r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}",
-    "phone": r"(\+?\d{1,2}\s?)?(\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4})",
-    "http_url": r"http://[^\s]+",
-    "password_assign": r"password\s*=\s*['\"].+['\"]",
-    "public_s3": r"acl\s*=\s*['\"]public-read['\"]",
-    "api_key": r"(?i)(api[_-]?key|token)\s*[:=]\s*['\"A-Za-z0-9_\-]+['\"]",
-    "pii_ssn": r"\b\d{3}-\d{2}-\d{4}\b",
-    "error_log": r"(?i)(error|unauthorized|denied|failed|exception)"
-}
+load_dotenv()
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
+if not GEMINI_API_KEY:
+    raise EnvironmentError("❌ Missing GEMINI_API_KEY in .env")
 
-def scan_text(name, text):
-    """Scan a text blob for risky patterns."""
-    findings = []
-    for label, pattern in PATTERNS.items():
-        matches = re.findall(pattern, text or "")
-        if matches:
-            findings.append({
-                "type": label,
-                "count": len(matches),
-                "example": str(matches[0])[:100],
-                "source": name
-            })
-    return findings
-
+genai.configure(api_key=GEMINI_API_KEY)
 
 # ---------------------------------------------------------------------
-# Core Analyzer
+# Core Analyzer (Gemini-based)
 # ---------------------------------------------------------------------
-def analyze_capture(capture_path):
-    """Read a capture JSON and produce analysis output."""
+def analyze_capture_with_gemini(capture_path):
+    """Send the capture JSON to Gemini for compliance/security analysis."""
     with open(capture_path, "r", errors="ignore") as f:
         data = json.load(f)
 
-    all_findings = []
+    # Combine relevant content for Gemini context
+    prompt_content = {
+        "branch": data.get("branch"),
+        "commit_message": data.get("commit_message"),
+        "diff_content": data.get("diff_content", "")[:8000],  # truncate if too long
+        "recent_terminal_history": "\n".join(data.get("recent_terminal_history", [])[-50:]),
+        "config_snapshots": list(data.get("config_snapshots", {}).keys()),
+        "log_snippets": {k: v[:2000] for k, v in data.get("log_snippets", {}).items()},
+    }
 
-    # 1️⃣ Diff content
-    if "diff_content" in data:
-        all_findings += scan_text("diff_content", data["diff_content"])
+    prompt = f"""
+You are a security and compliance auditor AI.
 
-    # 2️⃣ Terminal history
-    if "recent_terminal_history" in data:
-        joined = "\n".join(data["recent_terminal_history"])
-        all_findings += scan_text("terminal_history", joined)
+Analyze the following developer activity for **security, compliance, and privacy risks**.
+Provide:
+1. Overall risk level (low, medium, high)
+2. A list of specific issues found (with explanation)
+3. Mapped SOC2 or NIST controls if applicable
+4. Recommendations to the developer
 
-    # 3️⃣ Config snapshots (hashes can’t be scanned, but path names can)
-    if "config_snapshots" in data:
-        for path in data["config_snapshots"].keys():
-            all_findings += scan_text("config_file_path", path)
+Input data (JSON):
+{json.dumps(prompt_content, indent=2)}
 
-    # 4️⃣ Log snippets
-    if "log_snippets" in data:
-        for name, content in data["log_snippets"].items():
-            all_findings += scan_text(name, content)
+Respond in this JSON format:
 
-    # Risk level heuristic
-    risk_level = (
-        "high" if any("aws" in f["type"] or "password" in f["type"] for f in all_findings)
-        else "medium" if len(all_findings) > 2
-        else "low"
-    )
+{{
+  "risk_level": "low|medium|high",
+  "issues": [
+    {{
+      "type": "string",
+      "description": "string",
+      "recommendation": "string",
+      "related_control": "string (optional)"
+    }}
+  ],
+  "summary": "short summary of the analysis"
+}}
+    """
+
+    model = genai.GenerativeModel("gemini-2.5-flash-lite")
+    response = model.generate_content(prompt)
+
+    try:
+        # Try to parse JSON from Gemini output
+        gemini_output = json.loads(response.text)
+    except Exception:
+        # If Gemini doesn’t return perfect JSON, store as raw text
+        gemini_output = {"raw_text": response.text.strip()}
 
     analysis = {
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "source_capture": capture_path,
-        "risk_level": risk_level,
-        "finding_count": len(all_findings),
-        "findings": all_findings
+        "gemini_analysis": gemini_output
     }
 
     # Save to /captures/analysis/
     base_dir = os.path.dirname(capture_path).replace("commits", "analysis")
     os.makedirs(base_dir, exist_ok=True)
 
-    # Derive filename from capture
     capture_name = os.path.basename(capture_path).replace(".json", "_analysis.json")
     out_path = os.path.join(base_dir, capture_name)
 
     with open(out_path, "w") as f:
         json.dump(analysis, f, indent=4)
 
-    print(f"✅ Analysis complete: {out_path}")
-    print(f"🔍 Risk level: {risk_level} | {len(all_findings)} finding(s)")
-
-    # -----------------------------
-    # Print Commit Summary
-    # -----------------------------
-    summary = (
-        "\n🧾 COMMIT SUMMARY\n"
-        f"Branch: {data.get('branch', 'unknown')}\n"
-        f"Commit: {data.get('commit_message', 'N/A')}\n"
-        f"Risk Level: {risk_level}\n"
-        f"Findings: {len(all_findings)} ({', '.join(set(f['type'] for f in all_findings)) if all_findings else 'None'})\n"
-    )
-    print(summary)
-
-    
+    print(f"✅ Gemini analysis complete: {out_path}")
+    print(f"🔍 Risk level: {gemini_output.get('risk_level', 'unknown')}")
     return analysis
 
 
@@ -119,5 +103,5 @@ if __name__ == "__main__":
         print("⚠️ No capture files found. Commit something first.")
     else:
         latest = paths[-1]
-        print(f"🧠 Analyzing latest capture: {latest}")
-        analyze_capture(latest)
+        print(f"🧠 Sending latest capture to Gemini: {latest}")
+        analyze_capture_with_gemini(latest)
