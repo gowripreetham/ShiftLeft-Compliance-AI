@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import json
+import re
 from datetime import datetime
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -66,20 +67,26 @@ Respond in this JSON format:
     model = genai.GenerativeModel("gemini-2.5-flash-lite")
     response = model.generate_content(prompt)
 
-    try:
-        # Try to parse JSON from Gemini output
-        gemini_output = json.loads(response.text)
-    except Exception:
-        # If Gemini doesn’t return perfect JSON, store as raw text
-        gemini_output = {"raw_text": response.text.strip()}
+    # ---------------------------------------------------------------------
+    # Improved JSON parsing (handles ```json ... ``` wrappers)
+    # ---------------------------------------------------------------------
+    raw_text = response.text.strip()
+    cleaned_text = re.sub(r"^```(?:json)?|```$", "", raw_text, flags=re.MULTILINE).strip()
 
+    try:
+        gemini_output = json.loads(cleaned_text)
+    except Exception:
+        gemini_output = {"raw_text": cleaned_text}
+
+    # ---------------------------------------------------------------------
+    # Save analysis output
+    # ---------------------------------------------------------------------
     analysis = {
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "source_capture": capture_path,
         "gemini_analysis": gemini_output
     }
 
-    # Save to /captures/analysis/
     base_dir = os.path.dirname(capture_path).replace("commits", "analysis")
     os.makedirs(base_dir, exist_ok=True)
 
@@ -89,15 +96,37 @@ Respond in this JSON format:
     with open(out_path, "w") as f:
         json.dump(analysis, f, indent=4)
 
-    print(f"✅ Gemini analysis complete: {out_path}")
-    print(f"🔍 Risk level: {gemini_output.get('risk_level', 'unknown')}")
+    print(f"\n✅ Gemini analysis complete: {out_path}")
+
+    # ---------------------------------------------------------------------
+    # Display summary in terminal
+    # ---------------------------------------------------------------------
+    risk = gemini_output.get("risk_level", "unknown")
+    print(f"🔍 Risk level: {risk}")
+
+    issues = gemini_output.get("issues", [])
+    if issues and isinstance(issues, list):
+        print("\n🚨 Top Issues Found:")
+        for i, issue in enumerate(issues[:2], start=1):
+            print(f"  {i}. {issue.get('type', 'Unknown')} — {issue.get('description', '')[:120]}...")
+            print(f"     💡 Recommendation: {issue.get('recommendation', 'N/A')}")
+    else:
+        print("✅ No structured issues found (check raw output).")
+
+    summary = gemini_output.get("summary")
+    if summary:
+        print(f"\n🧾 Summary: {summary}")
+
+    print("\n---------------------------------------------\n")
     return analysis
 
 
+# ---------------------------------------------------------------------
+# Auto-run for latest capture
+# ---------------------------------------------------------------------
 if __name__ == "__main__":
     import glob
 
-    # Automatically analyze the latest capture file
     paths = sorted(glob.glob("captures/commits/**/*.json", recursive=True))
     if not paths:
         print("⚠️ No capture files found. Commit something first.")
