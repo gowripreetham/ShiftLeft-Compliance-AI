@@ -110,7 +110,7 @@ Description: {description[:500]}
         return None
 
 # ---------------------------------------------------------------------
-# 🧩 SLACK HELPER FUNCTION
+# 🧩 SLACK HELPER FUNCTION (More Robust Version)
 # ---------------------------------------------------------------------
 def send_slack_message(text: str):
     """Send a message to a Slack channel."""
@@ -121,18 +121,26 @@ def send_slack_message(text: str):
     url = "https://slack.com/api/chat.postMessage"
     headers = {
         "Authorization": f"Bearer {SLACK_BOT_TOKEN}",
-        "Content-Type": "application/json"
+        # Match the working curl command exactly
+        "Content-Type": "application/json; charset=utf-8" 
     }
     payload = {
         "channel": SLACK_CHANNEL_ID,
         "text": text
     }
 
-    response = requests.post(url, headers=headers, json=payload)
-    if response.status_code != 200 or not response.json().get("ok"):
-        print(f"❌ Failed to send Slack message: {response.text}")
-    else:
-        print("✅ Slack message sent successfully!")
+    try:
+        response = requests.post(url, headers=headers, json=payload)
+        
+        # Check for both HTTP status and Slack's 'ok' flag in the JSON
+        if response.status_code != 200 or not response.json().get("ok"):
+            print(f"❌ Failed to send Slack message: {response.text}")
+        else:
+            print("✅ Slack message sent successfully!")
+            
+    except requests.RequestException as e:
+        # This will catch connection errors, timeouts, etc.
+        print(f"❌ Failed to send Slack message due to network error: {e}")
 
 # ---------------------------------------------------------------------
 # Agent definition
