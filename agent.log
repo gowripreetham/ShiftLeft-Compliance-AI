@@ -1,0 +1,9 @@
+/Users/gowripreetam/Desktop/Gemini-Hack/venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+WARNING:  [network]: The deployed version of the Almanac Contract is 2.3.0 and you are using version 2.0.0. Update uAgents to the latest version to enable contract interactions.
+🚀 Fetch.ai Jira Agent (with Slack) running on port 8001
+INFO:     [fetch_jira_agent]: Starting agent with address: agent1qtk8m5s3cfdj6rrayvlxksg0spfz28a6702kwt6ks4avfadmkvlzzxcpf7n
+WARNING:  [fetch_jira_agent]: No endpoints provided. Skipping registration: Agent won't be reachable.
+INFO:     [fetch_jira_agent]: Agent inspector available at https://agentverse.ai/inspect/?uri=http%3A//127.0.0.1%3A8001&address=agent1qtk8m5s3cfdj6rrayvlxksg0spfz28a6702kwt6ks4avfadmkvlzzxcpf7n
+INFO:     [fetch_jira_agent]: Starting server on http://0.0.0.0:8001 (Press CTRL+C to quit)
+ERROR:    [Errno 48] error while attempting to bind on address ('0.0.0.0', 8001): address already in use
