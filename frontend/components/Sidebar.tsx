@@ -82,13 +82,13 @@ export default function Sidebar() {
         >
           {isDark ? (
             <>
-              <Sun className="h-4 w-4" />
-              <span>Light Mode</span>
+              <Moon className="h-4 w-4" />
+              <span>Dark Mode</span>
             </>
           ) : (
             <>
-              <Moon className="h-4 w-4" />
-              <span>Dark Mode</span>
+              <Sun className="h-4 w-4" />
+              <span>Light Mode</span>
             </>
           )}
         </button>
