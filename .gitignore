@@ -16,3 +16,6 @@ captures/
 # Database files
 chroma_db/
 fetch_agent.log
+
+# Test files with fake credentials
+test_vulnerabilities.py
