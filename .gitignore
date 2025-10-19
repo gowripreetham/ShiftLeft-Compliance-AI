@@ -4,7 +4,7 @@ __pycache__/
 .venv/
 
 # Environment & secrets
-
+.env
 private_keys.json
 
 # Captures & logs
