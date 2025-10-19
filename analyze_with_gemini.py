@@ -2,11 +2,28 @@
 import os
 import json
 import re
+import warnings
+import textwrap
 from datetime import datetime
 from pathlib import Path
+from colorama import Fore, Style, init
 import google.generativeai as genai
 from dotenv import load_dotenv
 import chromadb
+
+# --- START NOISE SUPPRESSION ---
+# 1. Suppress the 'NotOpenSSLWarning' from urllib3
+warnings.filterwarnings("ignore", message="urllib3 v2 only supports OpenSSL 1.1.1+")
+
+# 2. Suppress the gRPC/ALTS warnings
+os.environ['GRPC_VERBOSITY'] = 'ERROR'
+
+# 3. Suppress the TensorFlow/ABSL warnings (1 = ERROR)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+
+# Initialize colorama
+init(autoreset=True)
+# --- END NOISE SUPPRESSION ---
 
 # ---------------------------------------------------------------------
 # Setup Gemini API
@@ -124,7 +141,7 @@ Respond in this JSON format:
         matches = search_policy(issue_desc, top_k=1)
         if matches:
             control_id = matches[0]
-            print(f"🔍 Mapped to control: {control_id}")
+            print(f"{Fore.CYAN}🔍 Mapped to control: {Style.BRIGHT}{control_id}")
     
     # ---------------------------------------------------------------------
     # Save analysis output
@@ -148,24 +165,59 @@ Respond in this JSON format:
     print(f"\n✅ Gemini analysis complete: {out_path}")
 
     # ---------------------------------------------------------------------
-    # Display summary in terminal
+    # Display formatted summary in terminal
     # ---------------------------------------------------------------------
-    risk = gemini_output.get("risk_level", "unknown")
-    print(f"🔍 Risk level: {risk}")
+    risk_level = gemini_output.get("risk_level", "unknown")
+    summary = gemini_output.get("summary", "No summary provided.")
 
-    if issues and isinstance(issues, list):
-        print("\n🚨 Top Issues Found:")
-        for i, issue in enumerate(issues[:2], start=1):
-            print(f"  {i}. {issue.get('type', 'Unknown')} — {issue.get('description', '')[:120]}...")
-            print(f"     💡 Recommendation: {issue.get('recommendation', 'N/A')}")
+    # --- 1. Print Risk Level Header ---
+    if risk_level.lower() == 'high':
+        print(Fore.RED + Style.BRIGHT + "\n==========================================")
+        print(Fore.RED + Style.BRIGHT + "       🚨 HIGH RISK DETECTED 🚨")
+        print(Fore.RED + Style.BRIGHT + "==========================================")
+    elif risk_level.lower() == 'medium':
+        print(Fore.YELLOW + Style.BRIGHT + "\n==========================================")
+        print(Fore.YELLOW + Style.BRIGHT + "       ⚠️ MEDIUM RISK DETECTED ⚠️")
+        print(Fore.YELLOW + Style.BRIGHT + "==========================================")
+    elif risk_level.lower() == 'low':
+        print(Fore.GREEN + "\n==========================================")
+        print(Fore.GREEN + "        ✅ LOW RISK DETECTED")
+        print(Fore.GREEN + "==========================================")
     else:
-        print("✅ No structured issues found (check raw output).")
+        print(Fore.WHITE + "\n==========================================")
+        print(Fore.WHITE + "        ℹ️ INFO/UNKNOWN RISK")
+        print(Fore.WHITE + "==========================================")
 
-    summary = gemini_output.get("summary")
-    if summary:
-        print(f"\n🧾 Summary: {summary}")
+    # --- 2. Print Summary Info ---
+    print(f"{Style.BRIGHT}Control ID:{Style.NORMAL} {control_id}")
+    print(f"{Style.BRIGHT}Summary:   {Style.NORMAL} {summary}")
 
-    print("\n---------------------------------------------\n")
+    # --- 3. Print Formatted Issues ---
+    if issues and isinstance(issues, list):
+        print(Fore.WHITE + Style.BRIGHT + "\n--- Top Issues Found ---")
+        for i, issue in enumerate(issues[:2], start=1):
+            issue_type = issue.get('type', 'Unknown Issue')
+            description = issue.get('description', 'No description.')
+            recommendation = issue.get('recommendation', 'No recommendation.')
+            
+            # Print the Issue Type
+            print(f"\n{Style.BRIGHT}{i}. {issue_type}")
+            
+            # Print the indented, wrapped description
+            desc_lines = textwrap.wrap(description, width=80)
+            if desc_lines:
+                print(Fore.CYAN + "   ├─ Finding:  " + desc_lines[0])
+                for line in desc_lines[1:]:
+                    print(Fore.CYAN + "   │            " + line)
+            
+            # Print the indented, wrapped recommendation
+            rec_lines = textwrap.wrap(recommendation, width=80)
+            if rec_lines:
+                print(Fore.YELLOW + "   ╰─ 💡 Rec:    " + rec_lines[0])
+                for line in rec_lines[1:]:
+                    print(Fore.YELLOW + "                " + line)
+
+    print("\n---------------------------------------------")
     return analysis
 
 
