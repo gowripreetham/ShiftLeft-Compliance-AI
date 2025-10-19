@@ -239,4 +239,4 @@ if __name__ == "__main__":
 
 
 # FAKE CREDENTIAL FOR TESTING HIGH-RISK HOOK
-# SLACK_API_KEY = "xoxb-12345-abcdefg-this-is-a-fake-key"
+# OPEN_API_KEY = "xoxb-12345-abcdefg-this-is-a-fake-key"
