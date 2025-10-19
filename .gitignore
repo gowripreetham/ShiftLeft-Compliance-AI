@@ -12,3 +12,7 @@ private_keys.json
 captures/
 *.log
 *.diff
+
+# Database files
+chroma_db/
+fetch_agent.log
