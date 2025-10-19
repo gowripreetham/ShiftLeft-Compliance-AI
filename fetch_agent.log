@@ -21,3 +21,16 @@ INFO:     [fetch_jira_agent]: 🪵 Logged → captures/actions/2025-10-19T05:14:
 INFO:     [fetch_jira_agent]: 🪵 Logged → captures/actions/2025-10-19T05:14:59.346715Z_jira_action.json
 ✅ Jira Task created successfully! Key: CA-11
 INFO:     [fetch_jira_agent]: 🪵 Logged → captures/actions/2025-10-19T05:15:00.370710Z_jira_action.json
+INFO:     [fetch_jira_agent]: 
+🤖 Received analysis file: captures/analysis/master/2025-10-19_05-56-44_Its_working_analysis.json
+INFO:     [fetch_jira_agent]: 🔍 Risk level: high
+✅ Jira Task created successfully! Key: CA-12
+INFO:     [fetch_jira_agent]: 🪵 Logged → captures/actions/2025-10-19T05:56:52.793400Z_jira_action.json
+✅ Jira Task created successfully! Key: CA-13
+INFO:     [fetch_jira_agent]: 🪵 Logged → captures/actions/2025-10-19T05:56:53.623657Z_jira_action.json
+✅ Jira Task created successfully! Key: CA-14
+INFO:     [fetch_jira_agent]: 🪵 Logged → captures/actions/2025-10-19T05:56:54.684983Z_jira_action.json
+✅ Jira Task created successfully! Key: CA-15
+INFO:     [fetch_jira_agent]: 🪵 Logged → captures/actions/2025-10-19T05:56:55.563476Z_jira_action.json
+✅ Jira Task created successfully! Key: CA-16
+INFO:     [fetch_jira_agent]: 🪵 Logged → captures/actions/2025-10-19T05:56:56.228773Z_jira_action.json
