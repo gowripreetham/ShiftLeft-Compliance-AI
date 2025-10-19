@@ -1,2 +1,13 @@
-venv/
+# Python
+__pycache__/
+*.pyc
+.venv/
 
+# Environment & secrets
+.env
+private_keys.json
+
+# Captures & logs
+captures/
+*.log
+*.diff
