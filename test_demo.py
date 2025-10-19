@@ -15,3 +15,4 @@ password = "admin123"
 
 print("This is a test file for the demo")
 
+# Test vulnerability
