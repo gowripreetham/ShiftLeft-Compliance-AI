@@ -1,34 +1,45 @@
-import os, requests
+import os
+import requests
+import json
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Use the environment variable set in .env
-project_key = os.getenv("JIRA_PROJECT_KEY") 
+# --- Configuration from your agent ---
+JIRA_BASE_URL = os.getenv("JIRA_BASE_URL")
+JIRA_USER_EMAIL = os.getenv("JIRA_USER_EMAIL")
+JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
+JIRA_PROJECT_KEY = os.getenv("JIRA_PROJECT_KEY", "CA")
 
-# *** THE CORRECTED URL IS HERE ***
-url = os.getenv("JIRA_BASE_URL") + "/rest/api/3/search/jql" 
-auth = (os.getenv("JIRA_USER_EMAIL"), os.getenv("JIRA_API_TOKEN"))
-# Change the JQL to search for the summary text, ignoring the project key
-params = {"jql": "summary ~ \"SQL Injection Vulnerability\" ORDER BY created DESC"}
+url = f"{JIRA_BASE_URL}/rest/api/3/issue"
+auth = (JIRA_USER_EMAIL, JIRA_API_TOKEN)
+headers = {"Accept": "application/json", "Content-Type": "application/json"}
 
-# Also, temporarily set the print statement to reflect the broad search
-print("Searching across all projects for ticket summary text...")
-r = requests.get(url, auth=auth, params=params)
+data = {
+    "fields": {
+        "project": {"key": JIRA_PROJECT_KEY},
+        "issuetype": {"id": "10005"},  # Task type
+        "summary": "[HIGH] Test Agent Failure Debug",
+        "description": "Attempting to debug why tickets are not being created in project CA.",
+        "priority": {"name": "High"},
+        "reporter": {"id": JIRA_USER_EMAIL},
+    }
+}
 
-if r.status_code == 200:
-    data = r.json()
-    issues = data.get("issues", [])
-    print(f"\nStatus Code: {r.status_code} | Found {len(issues)} issues.")
-    
-    if issues:
-        print("--- Issues Found ---")
-        for issue in issues:
-            print(issue["key"], "-", issue["fields"]["summary"])
-        print("\n✅ ISSUES EXIST IN JIRA'S DATABASE.")
-    else:
-        print("\n❌ NO ISSUES FOUND. Check JIRA_PROJECT_KEY.")
+print("Attempting to create ticket...")
+response = requests.post(url, auth=auth, headers=headers, json=data)
+
+# --- Print the FULL Response Details ---
+print("\n--- JIRA API RESPONSE ---")
+print(f"Status Code: {response.status_code}")
+
+if response.status_code in (200, 201):
+    print("✅ SUCCESS! Ticket created. Check your CA project for 'Test Agent Failure Debug'")
+    print(f"Response Body (Key): {response.json().get('key')}")
 else:
-    # Print the status code and text for any new errors (like 401 or 404)
-    print(f"\n❌ API SEARCH FAILED. Status: {r.status_code}")
-    print(r.text)
+    print("❌ FAILURE DETECTED.")
+    print("\nResponse Headers:")
+    print(response.headers)
+    print("\nResponse Text (Full Error Body):")
+    # This is the line that will show the specific Jira validation error
+    print(response.text)
