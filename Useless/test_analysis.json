@@ -1,0 +1,15 @@
+{
+  "gemini_analysis": {
+    "risk_level": "high",
+    "issues": [
+      {
+        "type": "SQL Injection Vulnerability",
+        "description": "Critical issue found in user input handling. Must be patched immediately."
+      },
+      {
+        "type": "Unsecured API Key",
+        "description": "Hardcoded API key detected in source code. Rotate and use vault service."
+      }
+    ]
+  }
+}
