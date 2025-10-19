@@ -16,7 +16,10 @@ JIRA_BASE_URL = os.getenv("JIRA_BASE_URL")
 JIRA_USER_EMAIL = os.getenv("JIRA_USER_EMAIL")
 JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
 JIRA_PROJECT_KEY = os.getenv("JIRA_PROJECT_KEY", "CA")
-# 💡 REMOVED: JIRA_ACCOUNT_ID is no longer used in this version.
+
+# 🧩 SLACK INTEGRATION CONFIG
+SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
+SLACK_CHANNEL_ID = os.getenv("SLACK_CHANNEL_ID")
 
 # ---------------------------------------------------------------------
 # Jira helper: create new issue (Task or Bug)
@@ -28,34 +31,26 @@ def create_jira_ticket(summary: str, description: str, risk: str) -> Optional[Di
         print("❌ Jira credentials missing in .env (Check BASE_URL, EMAIL, TOKEN, PROJECT_KEY)")
         return None
 
-    # Decide issue type dynamically based on summary content
     issue_type = "Bug" if "vulnerability" in summary.lower() else "Task"
 
     url = f"{JIRA_BASE_URL}/rest/api/3/issue"
     auth = (JIRA_USER_EMAIL, JIRA_API_TOKEN)
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
 
-    # Create description using Atlassian Document Format (ADF) for robustness
     adf_description = {
         "type": "doc",
         "version": 1,
         "content": [
-            {
-                "type": "paragraph",
-                "content": [{"type": "text", "text": description[:32000]}] # Max length for ADF
-            }
+            {"type": "paragraph", "content": [{"type": "text", "text": description[:32000]}]}
         ]
     }
 
-    # 💡 MODIFIED: This payload now omits the 'reporter' field.
-    # If this fails, it's because Jira requires it to be explicitly set.
     data = {
         "fields": {
             "project": {"key": JIRA_PROJECT_KEY},
             "issuetype": {"name": issue_type},
             "summary": f"[{risk.upper()}] {summary}",
             "description": adf_description,
-            # 'priority' and 'reporter' are both omitted to rely on project defaults.
         }
     }
 
@@ -67,11 +62,11 @@ def create_jira_ticket(summary: str, description: str, risk: str) -> Optional[Di
         return response.json()
     else:
         print(f"❌ Jira issue creation failed with status {response.status_code}:")
-        print(response.text) # Print the full error for debugging
+        print(response.text)
         return None
 
 # ---------------------------------------------------------------------
-# Jira helper: comment fallback (No changes needed)
+# Jira helper: comment fallback
 # ---------------------------------------------------------------------
 TARGET_ISSUE_KEY = "CA-1"
 
@@ -115,7 +110,32 @@ Description: {description[:500]}
         return None
 
 # ---------------------------------------------------------------------
-# Agent definition (No changes needed)
+# 🧩 SLACK HELPER FUNCTION
+# ---------------------------------------------------------------------
+def send_slack_message(text: str):
+    """Send a message to a Slack channel."""
+    if not SLACK_BOT_TOKEN or not SLACK_CHANNEL_ID:
+        print("⚠️ Slack credentials missing. Skipping Slack alert.")
+        return
+
+    url = "https://slack.com/api/chat.postMessage"
+    headers = {
+        "Authorization": f"Bearer {SLACK_BOT_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "channel": SLACK_CHANNEL_ID,
+        "text": text
+    }
+
+    response = requests.post(url, headers=headers, json=payload)
+    if response.status_code != 200 or not response.json().get("ok"):
+        print(f"❌ Failed to send Slack message: {response.text}")
+    else:
+        print("✅ Slack message sent successfully!")
+
+# ---------------------------------------------------------------------
+# Agent definition
 # ---------------------------------------------------------------------
 agent = Agent(name="fetch_jira_agent", port=8001)
 
@@ -128,7 +148,7 @@ class ActionResponse(Model):
     error: Optional[str] = None
 
 # ---------------------------------------------------------------------
-# Main handler (No changes needed)
+# Main handler
 # ---------------------------------------------------------------------
 @agent.on_rest_post("/act", AnalysisRequest, ActionResponse)
 async def handle_analysis(ctx: Context, req: AnalysisRequest) -> Dict[str, Any]:
@@ -161,20 +181,32 @@ async def handle_analysis(ctx: Context, req: AnalysisRequest) -> Dict[str, Any]:
             desc = issue.get("description", "No description")
 
             ticket = create_jira_ticket(summary, desc, risk)
+            action_result = None
 
             if not ticket:
                 create_jira_comment(summary, desc, risk)
-                actions_taken.append("commented")
+                action_result = "commented"
             else:
-                actions_taken.append("ticket_created")
+                action_result = "ticket_created"
 
+            # 🧩 SLACK ALERT MESSAGE
+            slack_text = (
+                f"🚨 *High-Risk Finding Detected!*\n"
+                f"• *Summary:* {summary}\n"
+                f"• *Risk:* {risk.upper()}\n"
+                f"• *Action:* {action_result}\n"
+                f"• *Source:* `{analysis_path}`"
+            )
+            send_slack_message(slack_text)
+
+            # Log action
             os.makedirs("captures/actions", exist_ok=True)
             log_path = f"captures/actions/{datetime.utcnow().isoformat()}Z_jira_action.json"
             with open(log_path, "w") as log:
                 json.dump(
                     {
                         "timestamp": datetime.utcnow().isoformat() + "Z",
-                        "action": actions_taken[-1],
+                        "action": action_result,
                         "issue_type": summary,
                         "risk_level": risk,
                     },
@@ -183,15 +215,16 @@ async def handle_analysis(ctx: Context, req: AnalysisRequest) -> Dict[str, Any]:
                 )
             ctx.logger.info(f"🪵 Logged → {log_path}")
 
+            actions_taken.append(action_result)
+
         return {"ok": True, "action": ",".join(actions_taken), "error": None}
 
-    ctx.logger.info("✅ No high-risk issues detected — no Jira action taken.")
+    ctx.logger.info("✅ No high-risk issues detected — no Jira or Slack action taken.")
     return {"ok": True, "action": "none", "error": None}
 
 # ---------------------------------------------------------------------
-# Run agent (No changes needed)
+# Run agent
 # ---------------------------------------------------------------------
 if __name__ == "__main__":
-    print("🚀 Fetch.ai Jira Agent running on port 8001")
+    print("🚀 Fetch.ai Jira Agent (with Slack) running on port 8001")
     agent.run()
-
