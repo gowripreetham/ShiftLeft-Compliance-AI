@@ -1,17 +1,8 @@
 #!/usr/bin/env python3
+# --- START NOISE SUPPRESSION (MUST BE FIRST) ---
 import os
-import json
-import re
 import warnings
-import textwrap
-from datetime import datetime
-from pathlib import Path
-from colorama import Fore, Style, init
-import google.generativeai as genai
-from dotenv import load_dotenv
-import chromadb
 
-# --- START NOISE SUPPRESSION ---
 # 1. Suppress the 'NotOpenSSLWarning' from urllib3
 warnings.filterwarnings("ignore", message="urllib3 v2 only supports OpenSSL 1.1.1+")
 
@@ -20,10 +11,21 @@ os.environ['GRPC_VERBOSITY'] = 'ERROR'
 
 # 3. Suppress the TensorFlow/ABSL warnings (1 = ERROR)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+# --- END NOISE SUPPRESSION ---
+
+# Now import everything else
+import json
+import re
+import textwrap
+from datetime import datetime
+from pathlib import Path
+from colorama import Fore, Style, init
+import google.generativeai as genai
+from dotenv import load_dotenv
+import chromadb
 
 # Initialize colorama
 init(autoreset=True)
-# --- END NOISE SUPPRESSION ---
 
 # ---------------------------------------------------------------------
 # Setup Gemini API
