@@ -21,6 +21,10 @@ JIRA_PROJECT_KEY = os.getenv("JIRA_PROJECT_KEY", "CA")
 SLACK_BOT_TOKEN = os.getenv("SLACK_BOT_TOKEN")
 SLACK_CHANNEL_ID = os.getenv("SLACK_CHANNEL_ID")
 
+# 🧩 GITHUB INTEGRATION CONFIG
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+GITHUB_REPO = os.getenv("GITHUB_REPO")  # format: owner/repo
+
 # ---------------------------------------------------------------------
 # Jira helper: create new issue (Task or Bug)
 # ---------------------------------------------------------------------
@@ -110,7 +114,7 @@ Description: {description[:500]}
         return None
 
 # ---------------------------------------------------------------------
-# 🧩 SLACK HELPER FUNCTION (More Robust Version)
+# 🧩 SLACK HELPER FUNCTION
 # ---------------------------------------------------------------------
 def send_slack_message(text: str):
     """Send a message to a Slack channel."""
@@ -121,26 +125,77 @@ def send_slack_message(text: str):
     url = "https://slack.com/api/chat.postMessage"
     headers = {
         "Authorization": f"Bearer {SLACK_BOT_TOKEN}",
-        # Match the working curl command exactly
-        "Content-Type": "application/json; charset=utf-8" 
+        "Content-Type": "application/json"
     }
     payload = {
         "channel": SLACK_CHANNEL_ID,
         "text": text
     }
 
-    try:
-        response = requests.post(url, headers=headers, json=payload)
-        
-        # Check for both HTTP status and Slack's 'ok' flag in the JSON
-        if response.status_code != 200 or not response.json().get("ok"):
-            print(f"❌ Failed to send Slack message: {response.text}")
+    response = requests.post(url, headers=headers, json=payload)
+    print("🧩 Slack raw response:", response.text)
+    if response.status_code != 200 or not response.json().get("ok"):
+        print(f"❌ Failed to send Slack message: {response.text}")
+    else:
+        print("✅ Slack message sent successfully!")
+
+# ---------------------------------------------------------------------
+# 🧩 GITHUB HELPER FUNCTION
+# ---------------------------------------------------------------------
+def comment_on_github(issue_summary: str, description: str, risk: str, commit_sha: Optional[str] = None, pr_number: Optional[int] = None):
+    """
+    Post a comment to GitHub.
+    - If pr_number provided => post to PR: POST /repos/{owner}/{repo}/issues/{pr_number}/comments
+    - Else if commit_sha provided => post to commit: POST /repos/{owner}/{repo}/commits/{commit_sha}/comments
+    - Else: attempt to post a repository-level issue comment by creating an issue (fallback) OR skip.
+    """
+    if not GITHUB_TOKEN or not GITHUB_REPO:
+        print("⚠️ GitHub credentials missing. Skipping GitHub comment.")
+        return None
+
+    headers = {
+        "Authorization": f"Bearer {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+
+    comment_body = (
+        f"🚨 **High-Risk Compliance Finding Detected** 🚨\n\n"
+        f"**Risk:** {risk.upper()}\n"
+        f"**Summary:** {issue_summary}\n\n"
+        f"**Description:**\n{description}\n\n"
+        f"_This comment was automatically created by the Fetch.ai Compliance Agent._"
+    )
+
+    # Prefer PR comment if pr_number present
+    if pr_number:
+        url = f"https://api.github.com/repos/{GITHUB_REPO}/issues/{pr_number}/comments"
+        payload = {"body": comment_body}
+        resp = requests.post(url, headers=headers, json=payload)
+        print(f"🧩 GitHub PR comment response: {resp.status_code} {resp.text}")
+        if resp.status_code == 201:
+            print(f"✅ GitHub PR comment posted on PR #{pr_number}.")
+            return resp.json()
         else:
-            print("✅ Slack message sent successfully!")
-            
-    except requests.RequestException as e:
-        # This will catch connection errors, timeouts, etc.
-        print(f"❌ Failed to send Slack message due to network error: {e}")
+            print(f"❌ Failed to post PR comment: {resp.status_code}")
+            return None
+
+    # Else try commit comment
+    if commit_sha:
+        url = f"https://api.github.com/repos/{GITHUB_REPO}/commits/{commit_sha}/comments"
+        payload = {"body": comment_body}
+        resp = requests.post(url, headers=headers, json=payload)
+        print(f"🧩 GitHub commit comment response: {resp.status_code} {resp.text}")
+        if resp.status_code == 201:
+            print(f"✅ GitHub commit comment posted on commit {commit_sha}.")
+            return resp.json()
+        else:
+            print(f"❌ Failed to post commit comment: {resp.status_code}")
+            return None
+
+    # Fallback: try to create an issue to record the finding (optional)
+    # Commenting without a target is less useful; we log and return.
+    print("⚠️ No commit_sha or pr_number provided — skipping GitHub comment.")
+    return None
 
 # ---------------------------------------------------------------------
 # Agent definition
@@ -185,8 +240,11 @@ async def handle_analysis(ctx: Context, req: AnalysisRequest) -> Dict[str, Any]:
     if risk.lower() == "high" and issues:
         actions_taken = []
         for issue in issues:
+            # Expectation: issue may contain optional "commit_sha" or "pr_number" fields
             summary = issue.get("type", "Unknown issue")
             desc = issue.get("description", "No description")
+            commit_sha = issue.get("commit_sha")  # optional
+            pr_number = issue.get("pr_number")    # optional (int)
 
             ticket = create_jira_ticket(summary, desc, risk)
             action_result = None
@@ -196,6 +254,8 @@ async def handle_analysis(ctx: Context, req: AnalysisRequest) -> Dict[str, Any]:
                 action_result = "commented"
             else:
                 action_result = "ticket_created"
+                # If ticket created, we can capture its key for the Slack/GitHub message
+                jira_key = ticket.get("key")
 
             # 🧩 SLACK ALERT MESSAGE
             slack_text = (
@@ -203,9 +263,16 @@ async def handle_analysis(ctx: Context, req: AnalysisRequest) -> Dict[str, Any]:
                 f"• *Summary:* {summary}\n"
                 f"• *Risk:* {risk.upper()}\n"
                 f"• *Action:* {action_result}\n"
-                f"• *Source:* `{analysis_path}`"
+                f"• *Source:* `{analysis_path}`\n"
             )
+            if ticket and ticket.get("key"):
+                slack_text += f"• *Jira:* {ticket.get('key')}\n"
             send_slack_message(slack_text)
+
+            # 🧩 GITHUB COMMENT (best-effort)
+            gh_resp = comment_on_github(summary, desc, risk, commit_sha=commit_sha, pr_number=pr_number)
+            if gh_resp:
+                print("🪵 GitHub action performed and returned:", gh_resp)
 
             # Log action
             os.makedirs("captures/actions", exist_ok=True)
@@ -217,6 +284,8 @@ async def handle_analysis(ctx: Context, req: AnalysisRequest) -> Dict[str, Any]:
                         "action": action_result,
                         "issue_type": summary,
                         "risk_level": risk,
+                        "jira_key": ticket.get("key") if ticket else None,
+                        "github_result": {"commented": bool(gh_resp), "pr": pr_number, "commit": commit_sha},
                     },
                     log,
                     indent=4,
@@ -227,16 +296,12 @@ async def handle_analysis(ctx: Context, req: AnalysisRequest) -> Dict[str, Any]:
 
         return {"ok": True, "action": ",".join(actions_taken), "error": None}
 
-    ctx.logger.info("✅ No high-risk issues detected — no Jira or Slack action taken.")
+    ctx.logger.info("✅ No high-risk issues detected — no Jira, Slack, or GitHub action taken.")
     return {"ok": True, "action": "none", "error": None}
 
 # ---------------------------------------------------------------------
 # Run agent
 # ---------------------------------------------------------------------
 if __name__ == "__main__":
-    print("🚀 Fetch.ai Jira Agent (with Slack) running on port 8001")
+    print("🚀 Fetch.ai Jira Agent (with Slack + GitHub) running on port 8001")
     agent.run()
-
-
-# FAKE CREDENTIAL FOR TESTING HIGH-RISK HOOK
-# CLAUDE_API_KEY = "xoxb-12345-abcdefg-954289"
