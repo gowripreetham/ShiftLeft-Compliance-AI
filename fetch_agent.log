@@ -49,3 +49,18 @@ INFO:     [fetch_jira_agent]: 🪵 Logged → captures/actions/2025-10-19T06:09:
 INFO:     [fetch_jira_agent]: 🪵 Logged → captures/actions/2025-10-19T06:09:14.148477Z_jira_action.json
 ✅ Jira Task created successfully! Key: CA-22
 INFO:     [fetch_jira_agent]: 🪵 Logged → captures/actions/2025-10-19T06:09:15.014278Z_jira_action.json
+INFO:     [fetch_jira_agent]: 
+🤖 Received analysis file: captures/analysis/master/2025-10-19_06-17-14_Slack_analysis.json
+INFO:     [fetch_jira_agent]: 🔍 Risk level: high
+✅ Jira Task created successfully! Key: CA-23
+INFO:     [fetch_jira_agent]: 🪵 Logged → captures/actions/2025-10-19T06:17:22.053286Z_jira_action.json
+✅ Jira Task created successfully! Key: CA-24
+INFO:     [fetch_jira_agent]: 🪵 Logged → captures/actions/2025-10-19T06:17:22.837830Z_jira_action.json
+✅ Jira Task created successfully! Key: CA-25
+INFO:     [fetch_jira_agent]: 🪵 Logged → captures/actions/2025-10-19T06:17:23.721266Z_jira_action.json
+✅ Jira Task created successfully! Key: CA-26
+INFO:     [fetch_jira_agent]: 🪵 Logged → captures/actions/2025-10-19T06:17:24.678182Z_jira_action.json
+✅ Jira Task created successfully! Key: CA-27
+INFO:     [fetch_jira_agent]: 🪵 Logged → captures/actions/2025-10-19T06:17:25.597960Z_jira_action.json
+✅ Jira Task created successfully! Key: CA-28
+INFO:     [fetch_jira_agent]: 🪵 Logged → captures/actions/2025-10-19T06:17:26.520630Z_jira_action.json
