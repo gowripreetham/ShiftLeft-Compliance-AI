@@ -14,3 +14,7 @@ INFO:     [fetch_jira_agent]:
 🤖 Received analysis file: captures/analysis/main/2025-10-19_07-59-53_CHek_25_analysis.json
 INFO:     [fetch_jira_agent]: 🔍 Risk level: medium
 INFO:     [fetch_jira_agent]: ✅ No high-risk issues detected — no Jira or Slack action taken.
+INFO:     [fetch_jira_agent]: 
+🤖 Received analysis file: captures/analysis/main/2025-10-19_08-00-59_Chek95_analysis.json
+INFO:     [fetch_jira_agent]: 🔍 Risk level: medium
+INFO:     [fetch_jira_agent]: ✅ No high-risk issues detected — no Jira or Slack action taken.
