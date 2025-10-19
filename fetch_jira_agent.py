@@ -236,3 +236,7 @@ async def handle_analysis(ctx: Context, req: AnalysisRequest) -> Dict[str, Any]:
 if __name__ == "__main__":
     print("🚀 Fetch.ai Jira Agent (with Slack) running on port 8001")
     agent.run()
+
+
+# FAKE CREDENTIAL FOR TESTING HIGH-RISK HOOK
+# SLACK_API_KEY = "xoxb-12345-abcdefg-this-is-a-fake-key"

@@ -6,4 +6,7 @@ INFO:     [fetch_jira_agent]: Starting agent with address: agent1qtk8m5s3cfdj6rr
 WARNING:  [fetch_jira_agent]: No endpoints provided. Skipping registration: Agent won't be reachable.
 INFO:     [fetch_jira_agent]: Agent inspector available at https://agentverse.ai/inspect/?uri=http%3A//127.0.0.1%3A8001&address=agent1qtk8m5s3cfdj6rrayvlxksg0spfz28a6702kwt6ks4avfadmkvlzzxcpf7n
 INFO:     [fetch_jira_agent]: Starting server on http://0.0.0.0:8001 (Press CTRL+C to quit)
-ERROR:    [Errno 48] error while attempting to bind on address ('0.0.0.0', 8001): address already in use
+INFO:     [fetch_jira_agent]: 
+🤖 Received analysis file: captures/analysis/master/2025-10-19_06-29-38_Again_try_Slack_analysis.json
+INFO:     [fetch_jira_agent]: 🔍 Risk level: medium
+INFO:     [fetch_jira_agent]: ✅ No high-risk issues detected — no Jira or Slack action taken.
