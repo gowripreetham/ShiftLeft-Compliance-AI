@@ -1,32 +1,8 @@
 /Users/gowripreetam/Desktop/Gemini-Hack/venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
   warnings.warn(
 WARNING:  [network]: The deployed version of the Almanac Contract is 2.3.0 and you are using version 2.0.0. Update uAgents to the latest version to enable contract interactions.
-🚀 Fetch.ai Jira Agent (with Slack) running on port 8001
+🚀 Fetch.ai Jira Agent (with Slack + GitHub) running on port 8001
 INFO:     [fetch_jira_agent]: Starting agent with address: agent1qtk8m5s3cfdj6rrayvlxksg0spfz28a6702kwt6ks4avfadmkvlzzxcpf7n
 WARNING:  [fetch_jira_agent]: No endpoints provided. Skipping registration: Agent won't be reachable.
 INFO:     [fetch_jira_agent]: Agent inspector available at https://agentverse.ai/inspect/?uri=http%3A//127.0.0.1%3A8001&address=agent1qtk8m5s3cfdj6rrayvlxksg0spfz28a6702kwt6ks4avfadmkvlzzxcpf7n
 INFO:     [fetch_jira_agent]: Starting server on http://0.0.0.0:8001 (Press CTRL+C to quit)
-INFO:     [fetch_jira_agent]: 
-🤖 Received analysis file: captures/analysis/main/2025-10-19_07-59-01_Check1_analysis.json
-INFO:     [fetch_jira_agent]: 🔍 Risk level: low
-INFO:     [fetch_jira_agent]: ✅ No high-risk issues detected — no Jira or Slack action taken.
-INFO:     [fetch_jira_agent]: 
-🤖 Received analysis file: captures/analysis/main/2025-10-19_07-59-53_CHek_25_analysis.json
-INFO:     [fetch_jira_agent]: 🔍 Risk level: medium
-INFO:     [fetch_jira_agent]: ✅ No high-risk issues detected — no Jira or Slack action taken.
-INFO:     [fetch_jira_agent]: 
-🤖 Received analysis file: captures/analysis/main/2025-10-19_08-00-59_Chek95_analysis.json
-INFO:     [fetch_jira_agent]: 🔍 Risk level: medium
-INFO:     [fetch_jira_agent]: ✅ No high-risk issues detected — no Jira or Slack action taken.
-INFO:     [fetch_jira_agent]: 
-🤖 Received analysis file: captures/analysis/main/test_analysis.json
-INFO:     [fetch_jira_agent]: 🔍 Risk level: high
-✅ Jira Task created successfully! Key: CA-55
-✅ Slack message sent successfully!
-INFO:     [fetch_jira_agent]: 🪵 Logged → captures/actions/2025-10-19T08:03:18.206448Z_jira_action.json
-✅ Jira Task created successfully! Key: CA-56
-✅ Slack message sent successfully!
-INFO:     [fetch_jira_agent]: 🪵 Logged → captures/actions/2025-10-19T08:03:19.455671Z_jira_action.json
-✅ Jira Task created successfully! Key: CA-57
-✅ Slack message sent successfully!
-INFO:     [fetch_jira_agent]: 🪵 Logged → captures/actions/2025-10-19T08:03:20.603222Z_jira_action.json
