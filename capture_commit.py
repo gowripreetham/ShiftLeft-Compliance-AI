@@ -131,8 +131,13 @@ def build_commit_payload(diff_path="/tmp/staged.diff"):
 
     # Read the diff file
     if os.path.exists(diff_path):
-        with open(diff_path, "r") as f:
-            diff_content = f.read()
+        try:
+            with open(diff_path, "r", encoding="utf-8", errors="ignore") as f:
+                diff_content = f.read()
+        except UnicodeDecodeError:
+            # If UTF-8 fails, try reading as binary and decode with errors ignored
+            with open(diff_path, "rb") as f:
+                diff_content = f.read().decode("utf-8", errors="ignore")
     else:
         diff_content = ""
 

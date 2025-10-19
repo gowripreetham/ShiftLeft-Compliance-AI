@@ -33,7 +33,8 @@ def init_db():
                 jira_key TEXT,
                 github_link TEXT,
                 slack_link TEXT,
-                resolved INTEGER DEFAULT 0
+                resolved INTEGER DEFAULT 0,
+                control_id TEXT
             );
         """)
         conn.commit()
@@ -42,17 +43,25 @@ def init_db():
 # ---------------------------------------------------------------------
 # Insert new finding
 # ---------------------------------------------------------------------
-def store_finding(summary: str, risk: str, jira_key: str = None, github_link: str = None, slack_link: str = None):
-    """Insert a new compliance finding into memory."""
+def store_finding(summary: str, risk: str, jira_key: str = None, github_link: str = None, slack_link: str = None, control_id: str = None, source: str = 'code'):
+    """Insert a new compliance finding into memory and update policy status."""
     timestamp = datetime.utcnow().isoformat() + "Z"
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO audit_log (timestamp, summary, risk_level, jira_key, github_link, slack_link)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (timestamp, summary, risk, jira_key, github_link, slack_link))
+            INSERT INTO audit_log (timestamp, summary, risk_level, jira_key, github_link, slack_link, control_id, source)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (timestamp, summary, risk, jira_key, github_link, slack_link, control_id, source))
+        
+        # Update policy status to 'failing' if control_id is provided
+        if control_id:
+            cursor.execute("""
+                UPDATE policies SET status = 'failing' WHERE control_id = ?
+            """, (control_id,))
+            print(f"🔴 Updated policy {control_id} to FAILING status")
+        
         conn.commit()
-    print(f"🧩 Stored finding in memory: {summary[:60]}... [{risk.upper()}]")
+    print(f"🧩 Stored finding in memory: {summary[:60]}... [{risk.upper()}] Control: {control_id or 'N/A'} Source: {source}")
 
 # ---------------------------------------------------------------------
 # Fetch latest findings
@@ -62,7 +71,7 @@ def get_recent_findings(limit: int = 10):
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT timestamp, summary, risk_level, jira_key, github_link, slack_link, resolved
+            SELECT timestamp, summary, risk_level, jira_key, github_link, slack_link, resolved, control_id, source
             FROM audit_log ORDER BY id DESC LIMIT ?
         """, (limit,))
         results = cursor.fetchall()
@@ -89,12 +98,34 @@ def finding_exists(summary: str, risk: str) -> bool:
 # Mark Resolved
 # ---------------------------------------------------------------------
 def mark_resolved(jira_key: str):
-    """Mark a finding as resolved using its Jira issue key."""
+    """Mark a finding as resolved using its Jira issue key and update policy status."""
     with get_connection() as conn:
         cursor = conn.cursor()
+        
+        # Get the control_id before marking as resolved
+        cursor.execute("SELECT control_id FROM audit_log WHERE jira_key = ?", (jira_key,))
+        result = cursor.fetchone()
+        control_id = result[0] if result else None
+        
+        # Mark finding as resolved
         cursor.execute("""
             UPDATE audit_log SET resolved = 1 WHERE jira_key = ?
         """, (jira_key,))
+        
+        # Update policy status to 'passing' if no unresolved findings exist for this control
+        if control_id:
+            cursor.execute("""
+                UPDATE policies
+                SET status = 'passing'
+                WHERE control_id = ?
+                AND NOT EXISTS (
+                    SELECT 1 FROM audit_log
+                    WHERE control_id = ?
+                    AND resolved = 0
+                )
+            """, (control_id, control_id))
+            print(f"🟢 Updated policy {control_id} to PASSING status")
+        
         conn.commit()
     print(f"✅ Marked finding resolved for Jira key: {jira_key}")
 
@@ -106,7 +137,7 @@ def list_unresolved():
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT id, timestamp, summary, risk_level, jira_key
+            SELECT id, timestamp, summary, risk_level, jira_key, control_id
             FROM audit_log WHERE resolved = 0
             ORDER BY id DESC
         """)
@@ -116,4 +147,4 @@ def list_unresolved():
     else:
         print("🧾 Unresolved findings:")
         for r in rows:
-            print(f"  • [{r[3].upper()}] {r[2]} (Jira: {r[4] or 'N/A'}) @ {r[1]}")
+            print(f"  • [{r[3].upper()}] {r[2]} (Jira: {r[4] or 'N/A'}, Control: {r[5] or 'N/A'}) @ {r[1]}")

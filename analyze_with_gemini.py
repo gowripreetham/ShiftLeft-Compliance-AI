@@ -3,8 +3,10 @@ import os
 import json
 import re
 from datetime import datetime
+from pathlib import Path
 import google.generativeai as genai
 from dotenv import load_dotenv
+import chromadb
 
 # ---------------------------------------------------------------------
 # Setup Gemini API
@@ -16,6 +18,38 @@ if not GEMINI_API_KEY:
     raise EnvironmentError("❌ Missing GEMINI_API_KEY in .env")
 
 genai.configure(api_key=GEMINI_API_KEY)
+
+# ---------------------------------------------------------------------
+# Vector Search for Policy Controls
+# ---------------------------------------------------------------------
+CHROMA_DB_PATH = Path(__file__).parent / 'chroma_db'
+
+def search_policy(issue_description: str, top_k: int = 1):
+    """
+    Search for the most relevant policy control for a given issue.
+    
+    Args:
+        issue_description: Description of the security issue
+        top_k: Number of top results to return
+    
+    Returns:
+        List of matching control IDs
+    """
+    try:
+        client = chromadb.PersistentClient(path=str(CHROMA_DB_PATH))
+        collection = client.get_collection(name="policies")
+        
+        results = collection.query(
+            query_texts=[issue_description],
+            n_results=top_k
+        )
+        
+        if results['ids'] and len(results['ids'][0]) > 0:
+            return results['ids'][0]  # Return list of control IDs
+        return []
+    except Exception as e:
+        print(f"⚠️ Error searching policies: {e}")
+        return []
 
 # ---------------------------------------------------------------------
 # Core Analyzer (Gemini-based)
@@ -79,12 +113,27 @@ Respond in this JSON format:
         gemini_output = {"raw_text": cleaned_text}
 
     # ---------------------------------------------------------------------
+    # Vector search for control_id mapping
+    # ---------------------------------------------------------------------
+    issues = gemini_output.get("issues", [])
+    control_id = None
+    
+    if issues and isinstance(issues, list):
+        # Use the first issue's description for vector search
+        issue_desc = f"{issues[0].get('type', '')} {issues[0].get('description', '')}"
+        matches = search_policy(issue_desc, top_k=1)
+        if matches:
+            control_id = matches[0]
+            print(f"🔍 Mapped to control: {control_id}")
+    
+    # ---------------------------------------------------------------------
     # Save analysis output
     # ---------------------------------------------------------------------
     analysis = {
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "source_capture": capture_path,
-        "gemini_analysis": gemini_output
+        "gemini_analysis": gemini_output,
+        "control_id": control_id
     }
 
     base_dir = os.path.dirname(capture_path).replace("commits", "analysis")
@@ -104,7 +153,6 @@ Respond in this JSON format:
     risk = gemini_output.get("risk_level", "unknown")
     print(f"🔍 Risk level: {risk}")
 
-    issues = gemini_output.get("issues", [])
     if issues and isinstance(issues, list):
         print("\n🚨 Top Issues Found:")
         for i, issue in enumerate(issues[:2], start=1):
