@@ -106,7 +106,7 @@ export default function Settings() {
   return (
     <div className="p-6 bg-white dark:bg-black">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-black dark:text-white mb-1">Integrations</h1>
+        <h1 className="text-2xl font-semibold text-black dark:text-white mb-1">Settings</h1>
         <p className="text-sm text-black/60 dark:text-white/60">Configure your compliance monitoring integrations</p>
       </div>
 

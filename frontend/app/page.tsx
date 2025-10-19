@@ -107,7 +107,7 @@ export default function Dashboard() {
   return (
     <div className="p-6 bg-white dark:bg-black">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-black dark:text-white mb-1">Posture Overview</h1>
+        <h1 className="text-2xl font-semibold text-black dark:text-white mb-1">Overview</h1>
         <p className="text-sm text-black/60 dark:text-white/60">Real-time security compliance monitoring</p>
       </div>
 

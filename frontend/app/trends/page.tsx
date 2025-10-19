@@ -61,7 +61,7 @@ export default function Trends() {
   return (
     <div className="p-6 bg-white dark:bg-black">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-black dark:text-white mb-1">Risk Analytics</h1>
+        <h1 className="text-2xl font-semibold text-black dark:text-white mb-1">Analytics</h1>
         <p className="text-sm text-black/60 dark:text-white/60">Comprehensive compliance insights and metrics</p>
       </div>
 

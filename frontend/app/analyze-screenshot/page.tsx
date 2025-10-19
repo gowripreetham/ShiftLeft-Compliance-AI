@@ -155,7 +155,7 @@ export default function AnalyzeScreenshot() {
   return (
     <div className="p-6 bg-white dark:bg-black">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-black dark:text-white mb-1">Manual Analysis</h1>
+        <h1 className="text-2xl font-semibold text-black dark:text-white mb-1">Scan</h1>
         <p className="text-sm text-black/60 dark:text-white/60">Upload screenshots for real-time compliance analysis</p>
       </div>
 

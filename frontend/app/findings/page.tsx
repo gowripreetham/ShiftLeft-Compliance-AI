@@ -156,7 +156,7 @@ export default function Findings() {
   return (
     <div className="p-6 bg-white dark:bg-black">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-black dark:text-white mb-1">Findings Inbox</h1>
+        <h1 className="text-2xl font-semibold text-black dark:text-white mb-1">Issues</h1>
         <p className="text-sm text-black/60 dark:text-white/60">View and manage all security findings</p>
       </div>
 

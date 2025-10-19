@@ -8,12 +8,12 @@ import { cn } from '@/lib/utils'
 import Logo from './Logo'
 
 const navigation = [
-  { path: '/', label: 'Posture Overview', icon: LayoutDashboard },
-  { path: '/findings', label: 'Findings Inbox', icon: FileText },
-  { path: '/trends', label: 'Risk Analytics', icon: TrendingUp },
-  { path: '/posture', label: 'Controls Library', icon: BarChart3 },
-  { path: '/analyze-screenshot', label: 'Manual Analysis', icon: Camera },
-  { path: '/settings', label: 'Integrations', icon: Settings },
+  { path: '/', label: 'Overview', icon: LayoutDashboard },
+  { path: '/findings', label: 'Issues', icon: FileText },
+  { path: '/trends', label: 'Analytics', icon: TrendingUp },
+  { path: '/posture', label: 'Controls', icon: BarChart3 },
+  { path: '/analyze-screenshot', label: 'Scan', icon: Camera },
+  { path: '/settings', label: 'Settings', icon: Settings },
 ]
 
 export default function Sidebar() {
